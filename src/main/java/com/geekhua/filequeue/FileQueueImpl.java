@@ -22,9 +22,10 @@ public class FileQueueImpl<E> implements FileQueue<E> {
     private Config                              config;
     private MetaHolder                          metaHolder;
     private BlockingQueue<PrefetchCacheItem<E>> prefetchCache;
-    private volatile boolean                    stopped   = false;
-    private final ReentrantLock                 writeLock = new ReentrantLock();
-    private final ReentrantLock                 readLock  = new ReentrantLock();
+    private volatile boolean                    stopped           = false;
+    private final ReentrantLock                 writeLock         = new ReentrantLock();
+    private final ReentrantLock                 readLock          = new ReentrantLock();
+    private volatile long                       currentReadFileNo = -1L;
 
     public FileQueueImpl() {
         this(null);
@@ -44,39 +45,70 @@ public class FileQueueImpl<E> implements FileQueue<E> {
             dataStore.init();
             prefetchCache = new LinkedBlockingQueue<PrefetchCacheItem<E>>(config.getCacheSize());
 
-            Thread prefetchThread = new Thread(new Runnable() {
-
-                public void run() {
-                    while (!stopped) {
-                        try {
-                            E e = dataStore.take();
-                            PrefetchCacheItem<E> cacheItem = new PrefetchCacheItem<E>(e, dataStore.readingFileOffset(),
-                                    dataStore.readingFileNo());
-                            if (e != null) {
-                                prefetchCache.put(cacheItem);
-                            } else {
-                                Thread.sleep(10);
-                            }
-                        } catch (Exception e) {
-                            // TODO
-                        }
-                    }
-                }
-            });
-            prefetchThread.setName("FileQueue-" + config.getName() + "-prefetchThread");
-            prefetchThread.setDaemon(true);
-            prefetchThread.start();
+            startPrefetchThread(config.getName());
+            startClearExpireFileThread(config.getName());
         } catch (IOException e) {
             throw new RuntimeException("FileQueue init fail.", e);
         }
+    }
+
+    private void startPrefetchThread(String name) {
+        Thread prefetchThread = new Thread(new Runnable() {
+
+            public void run() {
+                while (!stopped) {
+                    try {
+                        E e = dataStore.take();
+
+                        if (e != null) {
+                            PrefetchCacheItem<E> cacheItem = new PrefetchCacheItem<E>(e, dataStore.readingFileOffset(),
+                                    dataStore.readingFileNo());
+                            prefetchCache.put(cacheItem);
+                        } else {
+                            Thread.sleep(2);
+                        }
+                    } catch (Exception e) {
+                        // TODO
+                    }
+                }
+            }
+        });
+        prefetchThread.setName("FileQueue-" + name + "-prefetchThread");
+        prefetchThread.setDaemon(true);
+        prefetchThread.start();
+    }
+
+    private void startClearExpireFileThread(String name) {
+        Thread clearThread = new Thread(new Runnable() {
+
+            public void run() {
+                while (!stopped) {
+                    try {
+                        if (currentReadFileNo >= 0L) {
+                            dataStore.clearExpireDataFiles(currentReadFileNo);
+                        }
+                        TimeUnit.SECONDS.sleep(1);
+                    } catch (Exception e) {
+                        // TODO
+                    }
+                }
+            }
+        });
+        clearThread.setName("FileQueue-" + name + "-clearThread");
+        clearThread.setDaemon(true);
+        clearThread.start();
     }
 
     public E get() throws InterruptedException {
         readLock.lock();
         try {
             PrefetchCacheItem<E> res = prefetchCache.take();
-            metaHolder.update(res.getReadingFileNo(), res.getReadingOffset());
-            return res.getElement();
+            if (res != null) {
+                metaHolder.update(res.getReadingFileNo(), res.getReadingOffset());
+                currentReadFileNo = res.getReadingFileNo();
+                return res.getElement();
+            }
+            return null;
         } finally {
             readLock.unlock();
         }
@@ -88,8 +120,10 @@ public class FileQueueImpl<E> implements FileQueue<E> {
             PrefetchCacheItem<E> res = prefetchCache.poll(timeout, timeUnit);
             if (res != null) {
                 metaHolder.update(res.getReadingFileNo(), res.getReadingOffset());
+                currentReadFileNo = res.getReadingFileNo();
+                return res.getElement();
             }
-            return res.getElement();
+            return null;
         } finally {
             readLock.unlock();
         }

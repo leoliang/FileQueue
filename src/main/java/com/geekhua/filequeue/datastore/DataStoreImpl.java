@@ -38,7 +38,7 @@ public class DataStoreImpl<E> implements DataStore<E> {
     private String              name;
     private RandomAccessFile    readingFile          = null;
     private AtomicLong          readingFileNo        = new AtomicLong(-1L);
-    private long                readingOffset        = 0L;
+    private AtomicLong          readingOffset        = new AtomicLong(0L);
     private boolean             bakReadFile          = false;
 
     private AtomicLong          writingFileNo        = new AtomicLong(-1L);
@@ -49,7 +49,7 @@ public class DataStoreImpl<E> implements DataStore<E> {
         this.baseDir = new File(new File(config.getBaseDir(), name), DATAFILE_DIRNAME);
         this.blockSize = BlockGroup.estimateBlockSize(config.getMsgAvgLen());
         this.readingFileNo = new AtomicLong(config.getReadingFileNo());
-        this.readingOffset = config.getReadingOffset();
+        this.readingOffset = new AtomicLong(config.getReadingOffset());
         this.codec = CodecFactory.getInstance(config.getCodec());
         this.fileSize = config.getFileSize();
         this.bakReadFile = config.isBakReadFile();
@@ -122,7 +122,21 @@ public class DataStoreImpl<E> implements DataStore<E> {
         getLastDataFileNo();
         recoverLastDataFileIfNeeded();
         createNewWriteFile();
+        checkReadingFile();
         openReadingFile();
+    }
+
+    private void checkReadingFile() {
+        if (readingFileNo.longValue() < 0 && writingFileNo.longValue() >= 0) {
+            readingFileNo = new AtomicLong(writingFileNo.longValue());
+            readingOffset.set(0L);
+        } else {
+            File file = new File(baseDir, getDataFileName(readingFileNo.longValue()));
+            while (!file.exists()) {
+                file = new File(baseDir, getDataFileName(readingFileNo.incrementAndGet()));
+                readingOffset.set(0L);
+            }
+        }
     }
 
     private void recoverLastDataFileIfNeeded() throws IOException {
@@ -179,16 +193,15 @@ public class DataStoreImpl<E> implements DataStore<E> {
     private void openReadingFile() {
         if (readingFileNo.longValue() < 0 && writingFileNo.longValue() >= 0) {
             readingFileNo = new AtomicLong(writingFileNo.longValue());
-            readingOffset = 0L;
+            readingOffset.set(0L);
         }
-
         if (readingFileNo.longValue() >= 0) {
             try {
                 readingFile = new RandomAccessFile(new File(baseDir, getDataFileName(readingFileNo.longValue())), "r");
 
-                if (readingOffset > 0L) {
-                    readingFile.seek(readingOffset % blockSize == 0 ? readingOffset
-                            : ((readingOffset / blockSize + 1) * blockSize));
+                if (readingOffset.longValue() > 0L) {
+                    readingFile.seek(readingOffset.longValue() % blockSize == 0 ? readingOffset.longValue()
+                            : ((readingOffset.longValue() / blockSize + 1) * blockSize));
                 }
             } catch (IOException e) {
                 throw new IllegalStateException(String.format("File(%s) open fail",
@@ -223,14 +236,9 @@ public class DataStoreImpl<E> implements DataStore<E> {
                 if (readingFileNo.longValue() < writingFileNo.longValue()) {
                     if (readingFile != null) {
                         readingFile.close();
-                        if (bakReadFile) {
-                            FileUtils.moveFileToDirectory(
-                                    new File(baseDir, getDataFileName(readingFileNo.longValue())), bakDir, true);
-                        } else {
-                            FileUtils.deleteQuietly(new File(baseDir, getDataFileName(readingFileNo.longValue())));
-                        }
                     }
                     readingFileNo.incrementAndGet();
+                    readingOffset.set(0L);
                     openReadingFile();
                     return take();
                 }
@@ -239,14 +247,14 @@ public class DataStoreImpl<E> implements DataStore<E> {
         if (blockGroup == null) {
             return null;
         } else {
-            readingOffset = readingFile.getFilePointer();
+            readingOffset.set(readingFile.getFilePointer());
             return codec.decode(blockGroup.getContent());
         }
 
     }
 
     public long readingFileOffset() {
-        return readingOffset;
+        return readingOffset.longValue();
     }
 
     public long readingFileNo() {
@@ -267,6 +275,20 @@ public class DataStoreImpl<E> implements DataStore<E> {
                 writingFile.close();
             } catch (IOException e) {
                 // TODO Auto-generated catch block
+            }
+        }
+    }
+
+    public void clearExpireDataFiles(long currentUsedFileNo) {
+        for (long fileNo = currentUsedFileNo - 1; fileNo >= 0; fileNo--) {
+            if (bakReadFile) {
+                try {
+                    FileUtils.moveFileToDirectory(new File(baseDir, getDataFileName(fileNo)), bakDir, true);
+                } catch (IOException e) {
+                    // TODO Auto-generated catch block
+                }
+            } else {
+                FileUtils.deleteQuietly(new File(baseDir, getDataFileName(fileNo)));
             }
         }
     }

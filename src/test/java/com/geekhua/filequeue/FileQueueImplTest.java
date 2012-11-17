@@ -110,10 +110,83 @@ public class FileQueueImplTest {
         }
 
         fq.close();
+        Thread.sleep(5000);
 
         fq = new FileQueueImpl<Integer>(config);
         for (int i = times / 2; i < times; i++) {
             Assert.assertEquals(Integer.valueOf(i), fq.get());
         }
+
+    }
+
+    @Test
+    public void testWriteSpeed() throws Exception {
+        Config config = new Config();
+        config.setMsgAvgLen(1024);
+        config.setBaseDir(baseDir.getAbsolutePath());
+        config.setFileSiz(1024 * 1024 * 500);
+        FileQueue<byte[]> fq = new FileQueueImpl<byte[]>(config);
+        byte[] content = new byte[1024];
+        for (int i = 0; i < 1024; i++) {
+            content[i] = 0x55;
+        }
+        int times = 100000;
+        long start = System.currentTimeMillis();
+        for (int i = 0; i < times; i++) {
+            fq.add(content);
+        }
+        System.out.println("[Write]Time spend " + (System.currentTimeMillis() - start) + "ms for " + times
+                + " times. Avg msg length 1024bytes, each data file 500MB.");
+
+    }
+
+    @Test
+    public void testReadSpeed() throws Exception {
+        Config config = new Config();
+        config.setMsgAvgLen(1024);
+        config.setBaseDir(baseDir.getAbsolutePath());
+        config.setFileSiz(1024 * 1024 * 500);
+        FileQueue<byte[]> fq = new FileQueueImpl<byte[]>(config);
+        byte[] content = new byte[1024];
+        for (int i = 0; i < 1024; i++) {
+            content[i] = 0x55;
+        }
+
+        int times = 100000;
+        for (int i = 0; i < times; i++) {
+            fq.add(content);
+        }
+
+        long start = System.currentTimeMillis();
+        for (int i = 0; i < times; i++) {
+            fq.get();
+        }
+        System.out.println("[Read]Time spend " + (System.currentTimeMillis() - start) + "ms for " + times
+                + " times. Avg msg length 1024bytes, each data file 500MB.");
+
+    }
+
+    @Test
+    public void testReadWriteSpeed() throws Exception {
+        Config config = new Config();
+        config.setMsgAvgLen(1024);
+        config.setBaseDir(baseDir.getAbsolutePath());
+        config.setFileSiz(1024 * 1024 * 500);
+        FileQueue<byte[]> fq = new FileQueueImpl<byte[]>(config);
+        byte[] content = new byte[1024];
+        for (int i = 0; i < 1024; i++) {
+            content[i] = 0x55;
+        }
+
+        int times = 1000;
+
+        long start = System.currentTimeMillis();
+        for (int i = 0; i < times; i++) {
+            fq.add(content);
+            fq.get();
+        }
+        System.out.println("[ReadWrite]Time spend " + (System.currentTimeMillis() - start) + "ms for " + times
+                + " times. Avg msg length 1024bytes, each data file 500MB.");
+
     }
 }

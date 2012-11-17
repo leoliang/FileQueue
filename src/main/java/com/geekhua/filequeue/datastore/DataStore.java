@@ -20,4 +20,6 @@ public interface DataStore<E> {
     long readingFileOffset();
 
     long readingFileNo();
+
+    void clearExpireDataFiles(long currentUsedFileNo);
 }
