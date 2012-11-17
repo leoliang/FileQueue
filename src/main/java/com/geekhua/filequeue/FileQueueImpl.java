@@ -18,13 +18,13 @@ import com.geekhua.filequeue.meta.MetaHolderImpl;
  * 
  */
 public class FileQueueImpl<E> implements FileQueue<E> {
-    private DataStore<E>        dataStore;
-    private Config              config;
-    private MetaHolder          metaHolder;
-    private BlockingQueue<E>    prefetchCache;
-    private volatile boolean    stopped = false;
-    private final ReentrantLock addLock = new ReentrantLock();
-    private final ReentrantLock getLock = new ReentrantLock();
+    private DataStore<E>                        dataStore;
+    private Config                              config;
+    private MetaHolder                          metaHolder;
+    private BlockingQueue<PrefetchCacheItem<E>> prefetchCache;
+    private volatile boolean                    stopped   = false;
+    private final ReentrantLock                 writeLock = new ReentrantLock();
+    private final ReentrantLock                 readLock  = new ReentrantLock();
 
     public FileQueueImpl() {
         this(null);
@@ -42,7 +42,7 @@ public class FileQueueImpl<E> implements FileQueue<E> {
             this.config.setReadingOffset(metaHolder.getReadingFileOffset());
             this.dataStore = new DataStoreImpl<E>(this.config);
             dataStore.init();
-            prefetchCache = new LinkedBlockingQueue<E>(config.getCacheSize());
+            prefetchCache = new LinkedBlockingQueue<PrefetchCacheItem<E>>(config.getCacheSize());
 
             Thread prefetchThread = new Thread(new Runnable() {
 
@@ -50,8 +50,10 @@ public class FileQueueImpl<E> implements FileQueue<E> {
                     while (!stopped) {
                         try {
                             E e = dataStore.take();
+                            PrefetchCacheItem<E> cacheItem = new PrefetchCacheItem<E>(e, dataStore.readingFileOffset(),
+                                    dataStore.readingFileNo());
                             if (e != null) {
-                                prefetchCache.put(e);
+                                prefetchCache.put(cacheItem);
                             } else {
                                 Thread.sleep(10);
                             }
@@ -70,38 +72,38 @@ public class FileQueueImpl<E> implements FileQueue<E> {
     }
 
     public E get() throws InterruptedException {
-        getLock.lock();
+        readLock.lock();
         try {
-            E res = prefetchCache.take();
-            metaHolder.update(dataStore.readingFileNo(), dataStore.readingFileOffset());
-            return res;
+            PrefetchCacheItem<E> res = prefetchCache.take();
+            metaHolder.update(res.getReadingFileNo(), res.getReadingOffset());
+            return res.getElement();
         } finally {
-            getLock.unlock();
+            readLock.unlock();
         }
     }
 
     public E get(long timeout, TimeUnit timeUnit) throws InterruptedException {
-        getLock.lock();
+        readLock.lock();
         try {
-            E res = prefetchCache.poll(timeout, timeUnit);
+            PrefetchCacheItem<E> res = prefetchCache.poll(timeout, timeUnit);
             if (res != null) {
-                metaHolder.update(dataStore.readingFileNo(), dataStore.readingFileOffset());
+                metaHolder.update(res.getReadingFileNo(), res.getReadingOffset());
             }
-            return res;
+            return res.getElement();
         } finally {
-            getLock.unlock();
+            readLock.unlock();
         }
     }
 
     public void add(E m) throws IOException, FileQueueClosedException {
-        addLock.lock();
+        writeLock.lock();
         try {
             if (stopped) {
                 throw new FileQueueClosedException();
             }
             dataStore.put(m);
         } finally {
-            addLock.unlock();
+            writeLock.unlock();
         }
     }
 
@@ -111,7 +113,39 @@ public class FileQueueImpl<E> implements FileQueue<E> {
      * @see com.geekhua.filequeue.FileQueue#close()
      */
     public void close() {
-        stopped = true;
+        writeLock.lock();
+        try {
+            stopped = true;
+            dataStore.close();
+        } finally {
+            writeLock.unlock();
+        }
+    }
+
+    private static class PrefetchCacheItem<E> {
+        private E    element;
+        private long readingOffset;
+        private long readingFileNo;
+
+        public PrefetchCacheItem(E element, long readingOffset, long readingFileNo) {
+            super();
+            this.element = element;
+            this.readingOffset = readingOffset;
+            this.readingFileNo = readingFileNo;
+        }
+
+        public E getElement() {
+            return element;
+        }
+
+        public long getReadingOffset() {
+            return readingOffset;
+        }
+
+        public long getReadingFileNo() {
+            return readingFileNo;
+        }
+
     }
 
 }

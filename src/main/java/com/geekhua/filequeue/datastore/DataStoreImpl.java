@@ -185,7 +185,6 @@ public class DataStoreImpl<E> implements DataStore<E> {
         if (readingFileNo.longValue() >= 0) {
             try {
                 readingFile = new RandomAccessFile(new File(baseDir, getDataFileName(readingFileNo.longValue())), "r");
-                readingOffset = 0L;
 
                 if (readingOffset > 0L) {
                     readingFile.seek(readingOffset % blockSize == 0 ? readingOffset
@@ -252,6 +251,24 @@ public class DataStoreImpl<E> implements DataStore<E> {
 
     public long readingFileNo() {
         return readingFileNo.longValue();
+    }
+
+    public void close() {
+        if (readingFile != null) {
+            try {
+                readingFile.close();
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+            }
+        }
+
+        if (writingFile != null) {
+            try {
+                writingFile.close();
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+            }
+        }
     }
 
 }

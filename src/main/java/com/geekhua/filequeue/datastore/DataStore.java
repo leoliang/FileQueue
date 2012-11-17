@@ -15,6 +15,8 @@ public interface DataStore<E> {
 
     void init() throws IOException;
 
+    void close();
+
     long readingFileOffset();
 
     long readingFileNo();

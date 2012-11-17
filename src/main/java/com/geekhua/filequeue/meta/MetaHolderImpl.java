@@ -106,4 +106,5 @@ public class MetaHolderImpl implements MetaHolder {
     public long getReadingFileOffset() {
         return meta.get().getReadingFileOffset();
     }
+
 }
