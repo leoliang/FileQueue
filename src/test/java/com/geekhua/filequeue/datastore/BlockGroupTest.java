@@ -18,7 +18,9 @@ import com.geekhua.filequeue.utils.EncryptUtils;
  * 
  */
 public class BlockGroupTest {
-    private static final File baseDir = new File(System.getProperty("java.io.tmpdir", "."), "blockGroupTest");
+    private static final File   baseDir     = new File(System.getProperty("java.io.tmpdir", "."), "blockGroupTest");
+    private static final byte[] HEADER      = new byte[] { (byte) 0xAA, (byte) 0xAA, (byte) 0xAA, (byte) 0xAB };
+    private static final int    CHECKSUMLEN = 20;
 
     @Before
     public void before() throws Exception {
@@ -173,7 +175,7 @@ public class BlockGroupTest {
             }
         }
 
-        blocks.put(BlockGroup.HEADER);
+        blocks.put(HEADER);
         blocks.putInt(20);
         blocks.put(new byte[] { 0, 0 });
 
@@ -200,7 +202,7 @@ public class BlockGroupTest {
             }
         }
 
-        blocks.put(BlockGroup.HEADER);
+        blocks.put(HEADER);
         blocks.putInt(20);
         blocks.put(new byte[] { 0, 0 });
 
@@ -234,7 +236,7 @@ public class BlockGroupTest {
             }
         }
 
-        blocks.put(BlockGroup.HEADER);
+        blocks.put(HEADER);
         blocks.putInt(20);
         blocks.put(new byte[] { 0, 0 });
 
@@ -259,11 +261,11 @@ public class BlockGroupTest {
     }
 
     private byte[] contentBytes(byte[] content, int blockSize) {
-        int bytesLen = content.length + BlockGroup.HEADER.length + 4 + BlockGroup.CHECKSUMLEN;
+        int bytesLen = content.length + HEADER.length + 4 + CHECKSUMLEN;
         ByteBuffer expectedBytes = ByteBuffer.allocate(((bytesLen / blockSize) + (bytesLen % blockSize == 0 ? 0 : 1))
                 * blockSize);
-        expectedBytes.put(BlockGroup.HEADER);
-        expectedBytes.putInt(content.length + BlockGroup.CHECKSUMLEN);
+        expectedBytes.put(HEADER);
+        expectedBytes.putInt(content.length + CHECKSUMLEN);
         expectedBytes.put(content);
         expectedBytes.put(EncryptUtils.sha1(content));
         while (expectedBytes.hasRemaining()) {
@@ -273,11 +275,11 @@ public class BlockGroupTest {
     }
 
     private byte[] contentBytesWithoutChecksum(byte[] content, int blockSize) {
-        int bytesLen = content.length + BlockGroup.HEADER.length + 4 + BlockGroup.CHECKSUMLEN;
+        int bytesLen = content.length + HEADER.length + 4 + CHECKSUMLEN;
         ByteBuffer expectedBytes = ByteBuffer.allocate(((bytesLen / blockSize) + (bytesLen % blockSize == 0 ? 0 : 1))
                 * blockSize);
-        expectedBytes.put(BlockGroup.HEADER);
-        expectedBytes.putInt(content.length + BlockGroup.CHECKSUMLEN);
+        expectedBytes.put(HEADER);
+        expectedBytes.putInt(content.length + CHECKSUMLEN);
         expectedBytes.put(content);
         while (expectedBytes.hasRemaining()) {
             expectedBytes.put((byte) 0);

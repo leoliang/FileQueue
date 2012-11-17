@@ -24,6 +24,8 @@ public class DataStoreImplTest {
                                                              "datastoreTest");
     private static final byte[] DATAFILE_END_CONTENT = new byte[] { (byte) 0xAA, (byte) 0xAA, (byte) 0xAA, (byte) 0xAA,
             (byte) 0xAA, (byte) 0xAA, (byte) 0xAA, (byte) 0xAB };
+    private static final byte[] HEADER               = new byte[] { (byte) 0xAA, (byte) 0xAA, (byte) 0xAA, (byte) 0xAB };
+    private static final int    CHECKSUMLEN          = 20;
 
     @Before
     public void before() throws Exception {
@@ -92,7 +94,7 @@ public class DataStoreImplTest {
             file.write(new byte[] { 1, 2, 3 });
             ds.put(content);
             Codec<byte[]> codec = CodecFactory.getInstance(CodecType.JAVAOBJECT);
-            int contentLen = codec.encode(content).length + BlockGroup.HEADER.length + BlockGroup.CHECKSUMLEN + 4;
+            int contentLen = codec.encode(content).length + HEADER.length + CHECKSUMLEN + 4;
             Assert.assertEquals(
                     BlockGroup.estimateBlockSize(10)
                             + (contentLen / BlockGroup.estimateBlockSize(10) + (contentLen
@@ -232,6 +234,75 @@ public class DataStoreImplTest {
             Assert.assertNull(ds.take());
         }
 
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testDeleteReadFile() throws Exception {
+        Config config = new Config();
+        config.setMsgAvgLen(10);
+        config.setBaseDir(baseDir.getAbsolutePath());
+        config.setFileSiz(38);
+        DataStore<byte[]> ds = new DataStoreImpl<byte[]>(config);
+        ds.init();
+        byte[] content = new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+        int times = 100;
+        for (int i = 0; i < times; i++) {
+            ds.put(content);
+        }
+
+        Collection<File> listFiles = (Collection<File>) FileUtils.listFiles(baseDir, new String[] { "fq" }, true);
+        Assert.assertEquals(times, listFiles.size());
+
+        for (int i = 0; i < times; i++) {
+            ds.take();
+            listFiles = (Collection<File>) FileUtils.listFiles(baseDir, new String[] { "fq" }, true);
+            Assert.assertEquals(times - i, listFiles.size());
+        }
+
+        listFiles = (Collection<File>) FileUtils.listFiles(baseDir, new String[] { "fq" }, true);
+        Assert.assertEquals(1, listFiles.size());
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testBakReadFile() throws Exception {
+        Config config = new Config();
+        config.setMsgAvgLen(10);
+        config.setBaseDir(baseDir.getAbsolutePath());
+        config.setFileSiz(38);
+        config.setBakReadFile(true);
+        DataStore<byte[]> ds = new DataStoreImpl<byte[]>(config);
+        ds.init();
+        byte[] content = new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+        int times = 100;
+        for (int i = 0; i < times; i++) {
+            ds.put(content);
+        }
+
+        Collection<File> dataFiles = (Collection<File>) FileUtils.listFiles(new File(baseDir, "default/data"),
+                new String[] { "fq" }, true);
+        Collection<File> bakFiles = (Collection<File>) FileUtils.listFiles(new File(baseDir, "default/bak"),
+                new String[] { "fq" }, true);
+        Assert.assertEquals(times, dataFiles.size());
+        Assert.assertTrue(bakFiles.isEmpty());
+
+        for (int i = 0; i < times; i++) {
+            ds.take();
+            dataFiles = (Collection<File>) FileUtils.listFiles(new File(baseDir, "default/data"),
+                    new String[] { "fq" }, true);
+            bakFiles = (Collection<File>) FileUtils.listFiles(new File(baseDir, "default/bak"), new String[] { "fq" },
+                    true);
+            Assert.assertEquals(times - i, dataFiles.size());
+            Assert.assertEquals(i, bakFiles.size());
+        }
+
+        dataFiles = (Collection<File>) FileUtils.listFiles(new File(baseDir, "default/data"), new String[] { "fq" },
+                true);
+        bakFiles = (Collection<File>) FileUtils
+                .listFiles(new File(baseDir, "default/bak"), new String[] { "fq" }, true);
+        Assert.assertEquals(1, dataFiles.size());
+        Assert.assertEquals(times - 1, bakFiles.size());
     }
 
     @Test

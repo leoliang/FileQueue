@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 
@@ -23,12 +24,14 @@ public class DataStoreImpl<E> implements DataStore<E> {
     private static final String DATAFILE_DIRNAME     = "data";
     private static final String DATAFILE_PREFIX      = "fdata-";
     private static final String DATAFILE_SUFIX       = ".fq";
+    private static final String DATAFILE_BAKDIR      = "bak";
 
     private static final byte[] DATAFILE_END_CONTENT = new byte[] { (byte) 0xAA, (byte) 0xAA, (byte) 0xAA, (byte) 0xAA,
             (byte) 0xAA, (byte) 0xAA, (byte) 0xAA, (byte) 0xAB };
 
     private byte[]              DATAFILE_END;
     private File                baseDir;
+    private File                bakDir;
     private int                 blockSize;
     private Codec<E>            codec;
     private long                fileSize;
@@ -36,6 +39,7 @@ public class DataStoreImpl<E> implements DataStore<E> {
     private RandomAccessFile    readingFile          = null;
     private AtomicLong          readingFileNo        = new AtomicLong(-1L);
     private long                readingOffset        = 0L;
+    private boolean             bakReadFile          = false;
 
     private AtomicLong          writingFileNo        = new AtomicLong(-1L);
     private RandomAccessFile    writingFile          = null;
@@ -48,11 +52,20 @@ public class DataStoreImpl<E> implements DataStore<E> {
         this.readingOffset = config.getReadingOffset();
         this.codec = CodecFactory.getInstance(config.getCodec());
         this.fileSize = config.getFileSize();
+        this.bakReadFile = config.isBakReadFile();
+        this.bakDir = new File(new File(config.getBaseDir(), name), DATAFILE_BAKDIR);
     }
 
     private boolean createBaseDirIfNeeded() {
         if (!baseDir.exists()) {
             return baseDir.mkdirs();
+        }
+        return true;
+    }
+
+    private boolean createBakDirIfNeeded() {
+        if (!bakDir.exists()) {
+            return bakDir.mkdirs();
         }
         return true;
     }
@@ -105,6 +118,7 @@ public class DataStoreImpl<E> implements DataStore<E> {
         this.DATAFILE_END = endFileBlockGroup.array();
 
         createBaseDirIfNeeded();
+        createBakDirIfNeeded();
         getLastDataFileNo();
         recoverLastDataFileIfNeeded();
         createNewWriteFile();
@@ -210,6 +224,12 @@ public class DataStoreImpl<E> implements DataStore<E> {
                 if (readingFileNo.longValue() < writingFileNo.longValue()) {
                     if (readingFile != null) {
                         readingFile.close();
+                        if (bakReadFile) {
+                            FileUtils.moveFileToDirectory(
+                                    new File(baseDir, getDataFileName(readingFileNo.longValue())), bakDir, true);
+                        } else {
+                            FileUtils.deleteQuietly(new File(baseDir, getDataFileName(readingFileNo.longValue())));
+                        }
                     }
                     readingFileNo.incrementAndGet();
                     openReadingFile();

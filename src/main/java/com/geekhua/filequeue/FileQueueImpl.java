@@ -4,9 +4,11 @@ import java.io.IOException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 
 import com.geekhua.filequeue.datastore.DataStore;
 import com.geekhua.filequeue.datastore.DataStoreImpl;
+import com.geekhua.filequeue.exception.FileQueueClosedException;
 import com.geekhua.filequeue.meta.MetaHolder;
 import com.geekhua.filequeue.meta.MetaHolderImpl;
 
@@ -16,10 +18,13 @@ import com.geekhua.filequeue.meta.MetaHolderImpl;
  * 
  */
 public class FileQueueImpl<E> implements FileQueue<E> {
-    private DataStore<E>     dataStore;
-    private Config           config;
-    private MetaHolder       metaHolder;
-    private BlockingQueue<E> prefetchCache;
+    private DataStore<E>        dataStore;
+    private Config              config;
+    private MetaHolder          metaHolder;
+    private BlockingQueue<E>    prefetchCache;
+    private volatile boolean    stopped = false;
+    private final ReentrantLock addLock = new ReentrantLock();
+    private final ReentrantLock getLock = new ReentrantLock();
 
     public FileQueueImpl() {
         this(null);
@@ -42,7 +47,7 @@ public class FileQueueImpl<E> implements FileQueue<E> {
             Thread prefetchThread = new Thread(new Runnable() {
 
                 public void run() {
-                    while (true) {
+                    while (!stopped) {
                         try {
                             E e = dataStore.take();
                             if (e != null) {
@@ -65,21 +70,39 @@ public class FileQueueImpl<E> implements FileQueue<E> {
     }
 
     public E get() throws InterruptedException {
-        E res = prefetchCache.take();
-        metaHolder.update(dataStore.readingFileNo(), dataStore.readingFileOffset());
-        return res;
+        getLock.lock();
+        try {
+            E res = prefetchCache.take();
+            metaHolder.update(dataStore.readingFileNo(), dataStore.readingFileOffset());
+            return res;
+        } finally {
+            getLock.unlock();
+        }
     }
 
     public E get(long timeout, TimeUnit timeUnit) throws InterruptedException {
-        E res = prefetchCache.poll(timeout, timeUnit);
-        if (res != null) {
-            metaHolder.update(dataStore.readingFileNo(), dataStore.readingFileOffset());
+        getLock.lock();
+        try {
+            E res = prefetchCache.poll(timeout, timeUnit);
+            if (res != null) {
+                metaHolder.update(dataStore.readingFileNo(), dataStore.readingFileOffset());
+            }
+            return res;
+        } finally {
+            getLock.unlock();
         }
-        return res;
     }
 
-    public void add(E m) throws IOException {
-        dataStore.put(m);
+    public void add(E m) throws IOException, FileQueueClosedException {
+        addLock.lock();
+        try {
+            if (stopped) {
+                throw new FileQueueClosedException();
+            }
+            dataStore.put(m);
+        } finally {
+            addLock.unlock();
+        }
     }
 
     /*
@@ -88,8 +111,7 @@ public class FileQueueImpl<E> implements FileQueue<E> {
      * @see com.geekhua.filequeue.FileQueue#close()
      */
     public void close() {
-        // TODO Auto-generated method stub
-
+        stopped = true;
     }
 
 }

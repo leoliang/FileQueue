@@ -15,13 +15,13 @@ import com.geekhua.filequeue.utils.StreamUtils;
  * 
  */
 public class BlockGroup {
-    public static final byte[] HEADER      = new byte[] { (byte) 0xAA, (byte) 0xAA, (byte) 0xAA, (byte) 0xAB };
-    public static final int    CHECKSUMLEN = 20;
+    private static final byte[] HEADER      = new byte[] { (byte) 0xAA, (byte) 0xAA, (byte) 0xAA, (byte) 0xAB };
+    private static final int    CHECKSUMLEN = 20;
 
-    private ByteBuffer         data;
-    private int                blockSize;
-    private byte[]             content;
-    private int                blockCount;
+    private ByteBuffer          data;
+    private int                 blockSize;
+    private byte[]              content;
+    private int                 blockCount;
 
     private BlockGroup(ByteBuffer data, int blockSize, int blockCount) {
         this.data = data;

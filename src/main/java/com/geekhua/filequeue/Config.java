@@ -15,9 +15,22 @@ public class Config {
     private long      readingFileNo = -1L;
     private long      readingOffset = 0L;
     private long      fileSiz       = 1024 * 1024 * 100;
+    private boolean   bakReadFile   = false;
 
     public static enum CodecType {
         JAVAOBJECT;
+    }
+
+    public boolean isBakReadFile() {
+        return bakReadFile;
+    }
+
+    /**
+     * @param bakReadFile
+     *            the bakReadFile to set
+     */
+    public void setBakReadFile(boolean bakReadFile) {
+        this.bakReadFile = bakReadFile;
     }
 
     public long getFileSiz() {
