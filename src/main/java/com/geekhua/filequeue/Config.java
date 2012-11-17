@@ -7,15 +7,16 @@ package com.geekhua.filequeue;
  */
 public class Config {
 
-    private int       cacheSize     = 1000;
-    private CodecType codec         = CodecType.JAVAOBJECT;
-    private String    name          = "default";
-    private String    baseDir       = "/data/appdatas/filequeue";
-    private int       msgAvgLen     = 1024;
-    private long      readingFileNo = -1L;
-    private long      readingOffset = 0L;
-    private long      fileSiz       = 1024 * 1024 * 100;
-    private boolean   bakReadFile   = false;
+    private int             cacheSize     = CACHESIZE_MIN;
+    private CodecType       codec         = CodecType.JAVAOBJECT;
+    private String          name          = "default";
+    private String          baseDir       = "/data/appdatas/filequeue";
+    private int             msgAvgLen     = 1024;
+    private long            readingFileNo = -1L;
+    private long            readingOffset = 0L;
+    private long            fileSiz       = 1024 * 1024 * 100;
+    private boolean         bakReadFile   = false;
+    public static final int CACHESIZE_MIN = 200;
 
     public static enum CodecType {
         JAVAOBJECT;
@@ -42,6 +43,9 @@ public class Config {
     }
 
     public void setCacheSize(int cacheSize) {
+        if (cacheSize < CACHESIZE_MIN) {
+            cacheSize = CACHESIZE_MIN;
+        }
         this.cacheSize = cacheSize;
     }
 

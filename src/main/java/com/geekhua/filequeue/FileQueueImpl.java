@@ -58,15 +58,21 @@ public class FileQueueImpl<E> implements FileQueue<E> {
             public void run() {
                 while (!stopped) {
                     try {
-                        E e = dataStore.take();
 
-                        if (e != null) {
-                            PrefetchCacheItem<E> cacheItem = new PrefetchCacheItem<E>(e, dataStore.readingFileOffset(),
-                                    dataStore.readingFileNo());
-                            prefetchCache.put(cacheItem);
-                        } else {
-                            Thread.sleep(2);
+                        int fetchBatchCount = 0;
+
+                        while (fetchBatchCount++ < Config.CACHESIZE_MIN) {
+                            E e = dataStore.take();
+
+                            if (e != null) {
+                                PrefetchCacheItem<E> cacheItem = new PrefetchCacheItem<E>(e,
+                                        dataStore.readingFileOffset(), dataStore.readingFileNo());
+                                prefetchCache.put(cacheItem);
+                            } else {
+                                break;
+                            }
                         }
+                        Thread.sleep(2);
                     } catch (Exception e) {
                         // TODO
                     }

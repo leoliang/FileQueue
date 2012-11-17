@@ -13,7 +13,8 @@ import org.junit.Test;
  * 
  */
 public class FileQueueImplTest {
-    private static final File baseDir = new File(System.getProperty("java.io.tmpdir", "."), "fileQueueImplTest");
+//    private static final File baseDir = new File(System.getProperty("java.io.tmpdir", "."), "fileQueueImplTest");
+    private static final File baseDir = new File("/Volumes/HDD/data/appdatas");
 
     @Before
     public void before() throws Exception {
@@ -107,6 +108,7 @@ public class FileQueueImplTest {
 
         for (int i = 0; i < times / 2; i++) {
             Assert.assertEquals(Integer.valueOf(i), fq.get());
+            System.out.println(i);
         }
 
         fq.close();
@@ -115,6 +117,7 @@ public class FileQueueImplTest {
         fq = new FileQueueImpl<Integer>(config);
         for (int i = times / 2; i < times; i++) {
             Assert.assertEquals(Integer.valueOf(i), fq.get());
+            System.out.println(i);
         }
 
     }
