@@ -256,7 +256,6 @@ public class DataStoreImplTest {
 
         for (int i = 0; i < times; i++) {
             ds.take();
-            ds.clearExpireDataFiles(ds.readingFileNo());
             listFiles = (Collection<File>) FileUtils.listFiles(baseDir, new String[] { "fq" }, true);
             Assert.assertEquals(times - i, listFiles.size());
         }
@@ -290,7 +289,6 @@ public class DataStoreImplTest {
 
         for (int i = 0; i < times; i++) {
             ds.take();
-            ds.clearExpireDataFiles(ds.readingFileNo());
             dataFiles = (Collection<File>) FileUtils.listFiles(new File(baseDir, "default/data"),
                     new String[] { "fq" }, true);
             bakFiles = (Collection<File>) FileUtils.listFiles(new File(baseDir, "default/bak"), new String[] { "fq" },

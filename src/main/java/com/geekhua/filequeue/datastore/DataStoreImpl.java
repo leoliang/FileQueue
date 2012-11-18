@@ -236,6 +236,16 @@ public class DataStoreImpl<E> implements DataStore<E> {
                 if (readingFileNo.longValue() < writingFileNo.longValue()) {
                     if (readingFile != null) {
                         readingFile.close();
+                        if (bakReadFile) {
+                            try {
+                                FileUtils.moveFileToDirectory(
+                                        new File(baseDir, getDataFileName(readingFileNo.longValue())), bakDir, true);
+                            } catch (IOException e) {
+                                // TODO Auto-generated catch block
+                            }
+                        } else {
+                            FileUtils.deleteQuietly(new File(baseDir, getDataFileName(readingFileNo.longValue())));
+                        }
                     }
                     readingFileNo.incrementAndGet();
                     readingOffset.set(0L);
@@ -275,20 +285,6 @@ public class DataStoreImpl<E> implements DataStore<E> {
                 writingFile.close();
             } catch (IOException e) {
                 // TODO Auto-generated catch block
-            }
-        }
-    }
-
-    public void clearExpireDataFiles(long currentUsedFileNo) {
-        for (long fileNo = currentUsedFileNo - 1; fileNo >= 0; fileNo--) {
-            if (bakReadFile) {
-                try {
-                    FileUtils.moveFileToDirectory(new File(baseDir, getDataFileName(fileNo)), bakDir, true);
-                } catch (IOException e) {
-                    // TODO Auto-generated catch block
-                }
-            } else {
-                FileUtils.deleteQuietly(new File(baseDir, getDataFileName(fileNo)));
             }
         }
     }

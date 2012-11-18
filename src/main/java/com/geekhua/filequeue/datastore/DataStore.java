@@ -21,5 +21,4 @@ public interface DataStore<E> {
 
     long readingFileNo();
 
-    void clearExpireDataFiles(long currentUsedFileNo);
 }

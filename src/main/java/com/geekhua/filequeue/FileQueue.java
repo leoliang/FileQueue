@@ -10,9 +10,9 @@ import com.geekhua.filequeue.exception.FileQueueClosedException;
  * 
  */
 public interface FileQueue<E> {
-    public E get() throws InterruptedException;
+    public E get() throws InterruptedException, IOException;
 
-    public E get(long timeout, TimeUnit timeUnit) throws InterruptedException;
+    public E get(long timeout, TimeUnit timeUnit) throws InterruptedException, IOException;
 
     public void add(E m) throws IOException, FileQueueClosedException;
 

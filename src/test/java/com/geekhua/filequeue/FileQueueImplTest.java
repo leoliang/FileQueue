@@ -1,6 +1,7 @@
 package com.geekhua.filequeue;
 
 import java.io.File;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.io.FileUtils;
 import org.junit.After;
@@ -13,8 +14,10 @@ import org.junit.Test;
  * 
  */
 public class FileQueueImplTest {
-//    private static final File baseDir = new File(System.getProperty("java.io.tmpdir", "."), "fileQueueImplTest");
-    private static final File baseDir = new File("/Volumes/HDD/data/appdatas");
+    private static final File baseDir = new File(System.getProperty("java.io.tmpdir", "."), "fileQueueImplTest");
+
+    // private static final File baseDir = new
+    // File("/Volumes/HDD/data/appdatas");
 
     @Before
     public void before() throws Exception {
@@ -62,6 +65,23 @@ public class FileQueueImplTest {
             Assert.assertEquals(Integer.valueOf(i), fq.get());
         }
         fq.close();
+    }
+
+    @Test
+    public void testGetTimeout() throws Exception {
+        Config config = new Config();
+        config.setBaseDir(baseDir.getAbsolutePath());
+        config.setCacheSize(100);
+        config.setMsgAvgLen(10);
+        config.setName("test");
+        config.setFileSiz(1024);
+        FileQueue<Integer> fq = new FileQueueImpl<Integer>(config);
+
+        long start = System.currentTimeMillis();
+        Integer res = fq.get(1, TimeUnit.SECONDS);
+        Assert.assertEquals(1, (System.currentTimeMillis() - start) / 1000);
+        Assert.assertNull(res);
+
     }
 
     @Test
@@ -181,7 +201,7 @@ public class FileQueueImplTest {
             content[i] = 0x55;
         }
 
-        int times = 1000;
+        int times = 10000;
 
         long start = System.currentTimeMillis();
         for (int i = 0; i < times; i++) {
