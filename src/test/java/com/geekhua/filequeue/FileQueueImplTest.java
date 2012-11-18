@@ -201,7 +201,7 @@ public class FileQueueImplTest {
             content[i] = 0x55;
         }
 
-        int times = 10000;
+        int times = 100000;
 
         long start = System.currentTimeMillis();
         for (int i = 0; i < times; i++) {
