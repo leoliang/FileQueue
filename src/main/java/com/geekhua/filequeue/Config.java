@@ -19,7 +19,7 @@ public class Config {
     public static final int CACHESIZE_MIN = 200;
 
     public static enum CodecType {
-        JAVAOBJECT;
+        JAVAOBJECT, KRYO;
     }
 
     public boolean isBakReadFile() {

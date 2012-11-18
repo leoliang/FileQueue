@@ -18,7 +18,9 @@ import com.geekhua.filequeue.utils.EncryptUtils;
  * 
  */
 public class BlockGroupTest {
-    private static final File   baseDir     = new File(System.getProperty("java.io.tmpdir", "."), "blockGroupTest");
+    private static final File baseDir = new File(System.getProperty("java.io.tmpdir", "."),
+            "blockGroupTest");
+//    private static final File baseDir = new File("blockGroupTest");
     private static final byte[] HEADER      = new byte[] { (byte) 0xAA, (byte) 0xAA, (byte) 0xAA, (byte) 0xAB };
     private static final int    CHECKSUMLEN = 20;
 
@@ -69,6 +71,7 @@ public class BlockGroupTest {
 
         BlockGroup readBlockGroup = BlockGroup.read(file, 1024);
         Assert.assertArrayEquals(content, readBlockGroup.getContent());
+        file.close();
     }
 
     @Test
@@ -83,6 +86,7 @@ public class BlockGroupTest {
 
         BlockGroup readBlockGroup = BlockGroup.read(file, 10);
         Assert.assertArrayEquals(content, readBlockGroup.getContent());
+        file.close();
     }
 
     @Test
@@ -101,6 +105,7 @@ public class BlockGroupTest {
 
         BlockGroup readBlockGroup = BlockGroup.read(file, 1024);
         Assert.assertArrayEquals(content, readBlockGroup.getContent());
+        file.close();
     }
 
     @Test
@@ -121,6 +126,7 @@ public class BlockGroupTest {
 
         BlockGroup readBlockGroup = BlockGroup.read(file, 10);
         Assert.assertArrayEquals(content, readBlockGroup.getContent());
+        file.close();
     }
 
     @Test
@@ -141,6 +147,7 @@ public class BlockGroupTest {
 
         BlockGroup readBlockGroup = BlockGroup.read(file, 1024);
         Assert.assertArrayEquals(content, readBlockGroup.getContent());
+        file.close();
     }
 
     @Test
@@ -163,6 +170,7 @@ public class BlockGroupTest {
 
         BlockGroup readBlockGroup = BlockGroup.read(file, 10);
         Assert.assertArrayEquals(content, readBlockGroup.getContent());
+        file.close();
     }
 
     @Test
@@ -190,6 +198,7 @@ public class BlockGroupTest {
 
         BlockGroup readBlockGroup = BlockGroup.read(file, 10);
         Assert.assertArrayEquals(content, readBlockGroup.getContent());
+        file.close();
     }
 
     @Test
@@ -224,6 +233,7 @@ public class BlockGroupTest {
         file.seek(originPos);
         readBlockGroup = BlockGroup.read(file, 10);
         Assert.assertArrayEquals(content, readBlockGroup.getContent());
+        file.close();
     }
 
     @Test
@@ -258,6 +268,7 @@ public class BlockGroupTest {
         file.seek(originPos);
         readBlockGroup = BlockGroup.read(file, 10);
         Assert.assertArrayEquals(content, readBlockGroup.getContent());
+        file.close();
     }
 
     private byte[] contentBytes(byte[] content, int blockSize) {
