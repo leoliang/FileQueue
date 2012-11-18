@@ -69,6 +69,7 @@ public class BlockGroupTest {
 
         BlockGroup readBlockGroup = BlockGroup.read(file, 1024);
         Assert.assertArrayEquals(content, readBlockGroup.getContent());
+        file.close();
     }
 
     @Test
@@ -83,6 +84,7 @@ public class BlockGroupTest {
 
         BlockGroup readBlockGroup = BlockGroup.read(file, 10);
         Assert.assertArrayEquals(content, readBlockGroup.getContent());
+        file.close();
     }
 
     @Test
@@ -101,6 +103,7 @@ public class BlockGroupTest {
 
         BlockGroup readBlockGroup = BlockGroup.read(file, 1024);
         Assert.assertArrayEquals(content, readBlockGroup.getContent());
+        file.close();
     }
 
     @Test
@@ -121,6 +124,7 @@ public class BlockGroupTest {
 
         BlockGroup readBlockGroup = BlockGroup.read(file, 10);
         Assert.assertArrayEquals(content, readBlockGroup.getContent());
+        file.close();
     }
 
     @Test
@@ -141,6 +145,7 @@ public class BlockGroupTest {
 
         BlockGroup readBlockGroup = BlockGroup.read(file, 1024);
         Assert.assertArrayEquals(content, readBlockGroup.getContent());
+        file.close();
     }
 
     @Test
@@ -163,6 +168,7 @@ public class BlockGroupTest {
 
         BlockGroup readBlockGroup = BlockGroup.read(file, 10);
         Assert.assertArrayEquals(content, readBlockGroup.getContent());
+        file.close();
     }
 
     @Test
@@ -190,6 +196,7 @@ public class BlockGroupTest {
 
         BlockGroup readBlockGroup = BlockGroup.read(file, 10);
         Assert.assertArrayEquals(content, readBlockGroup.getContent());
+        file.close();
     }
 
     @Test
@@ -224,6 +231,7 @@ public class BlockGroupTest {
         file.seek(originPos);
         readBlockGroup = BlockGroup.read(file, 10);
         Assert.assertArrayEquals(content, readBlockGroup.getContent());
+        file.close();
     }
 
     @Test
@@ -258,6 +266,7 @@ public class BlockGroupTest {
         file.seek(originPos);
         readBlockGroup = BlockGroup.read(file, 10);
         Assert.assertArrayEquals(content, readBlockGroup.getContent());
+        file.close();
     }
 
     private byte[] contentBytes(byte[] content, int blockSize) {
