@@ -1,9 +1,17 @@
 package com.geekhua.filequeue;
 
 import java.io.File;
+import java.io.Serializable;
+import java.util.Collections;
+import java.util.Random;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.builder.CompareToBuilder;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -38,7 +46,6 @@ public class FileQueueImplTest {
     public void testAdd() throws Exception {
         Config config = new Config();
         config.setBaseDir(baseDir.getAbsolutePath());
-        config.setCacheSize(100);
         config.setMsgAvgLen(10);
         config.setName("test");
         FileQueue<String> fq = new FileQueueImpl<String>(config);
@@ -51,7 +58,6 @@ public class FileQueueImplTest {
     public void testAddMultiFiles() throws Exception {
         Config config = new Config();
         config.setBaseDir(baseDir.getAbsolutePath());
-        config.setCacheSize(100);
         config.setMsgAvgLen(10);
         config.setName("test");
         config.setFileSiz(1024);
@@ -71,7 +77,6 @@ public class FileQueueImplTest {
     public void testGetTimeout() throws Exception {
         Config config = new Config();
         config.setBaseDir(baseDir.getAbsolutePath());
-        config.setCacheSize(100);
         config.setMsgAvgLen(10);
         config.setName("test");
         config.setFileSiz(1024);
@@ -89,7 +94,6 @@ public class FileQueueImplTest {
         int times = 100;
         Config config = new Config();
         config.setBaseDir(baseDir.getAbsolutePath());
-        config.setCacheSize(100);
         config.setMsgAvgLen(10);
         config.setName("test");
         // single data file
@@ -116,7 +120,6 @@ public class FileQueueImplTest {
         int times = 1000;
         Config config = new Config();
         config.setBaseDir(baseDir.getAbsolutePath());
-        config.setCacheSize(100);
         config.setMsgAvgLen(10);
         config.setName("test");
         // multi data files
@@ -128,7 +131,6 @@ public class FileQueueImplTest {
 
         for (int i = 0; i < times / 2; i++) {
             Assert.assertEquals(Integer.valueOf(i), fq.get());
-            System.out.println(i);
         }
 
         fq.close();
@@ -137,7 +139,6 @@ public class FileQueueImplTest {
         fq = new FileQueueImpl<Integer>(config);
         for (int i = times / 2; i < times; i++) {
             Assert.assertEquals(Integer.valueOf(i), fq.get());
-            System.out.println(i);
         }
 
     }
@@ -212,4 +213,370 @@ public class FileQueueImplTest {
                 + " times. Avg msg length 1024bytes, each data file 500MB.");
 
     }
+
+    @Test
+    public void concurrentTestReadFasterThanWrite() throws Exception {
+        final int totalTimes = 10000;
+        final int writerCount = 10;
+        final int readerCount = 20;
+
+        Config config = new Config();
+        config.setBaseDir(baseDir.getAbsolutePath());
+
+        final FileQueue<TestObject> fq = new FileQueueImpl<TestObject>(config);
+        final Set<TestObject> results = Collections.synchronizedSet(new TreeSet<TestObject>());
+
+        final Set<TestObject> expected = Collections.synchronizedSet(new TreeSet<TestObject>());
+
+        final CountDownLatch startLatch = new CountDownLatch(1);
+        final CountDownLatch endLatch = new CountDownLatch(writerCount + readerCount);
+
+        for (int i = 0; i < writerCount; i++) {
+            final int threadNum = i;
+            Thread writerThread = new Thread(new Runnable() {
+
+                public void run() {
+                    try {
+                        startLatch.await();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
+                    for (int j = 0; j < totalTimes / writerCount; j++) {
+                        try {
+                            TestObject m = new TestObject(totalTimes, "t-" + threadNum + "-" + j, j % 2 == 0, j);
+                            fq.add(m);
+                            expected.add(m);
+                            Thread.sleep(5);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+
+                    endLatch.countDown();
+                }
+            });
+
+            writerThread.start();
+        }
+
+        for (int i = 0; i < readerCount; i++) {
+            Thread readerThread = new Thread(new Runnable() {
+
+                public void run() {
+                    try {
+                        startLatch.await();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
+                    for (int j = 0; j < totalTimes / readerCount; j++) {
+                        try {
+                            TestObject m = fq.get();
+                            results.add(m);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+
+                    endLatch.countDown();
+                }
+            });
+
+            readerThread.start();
+        }
+
+        startLatch.countDown();
+        endLatch.await();
+        Assert.assertTrue(expected.equals(results));
+    }
+
+    @Test
+    public void concurrentTestWriterFasterThanReader() throws Exception {
+        final int totalTimes = 10000;
+        final int writerCount = 20;
+        final int readerCount = 10;
+
+        Config config = new Config();
+        config.setBaseDir(baseDir.getAbsolutePath());
+
+        final FileQueue<TestObject> fq = new FileQueueImpl<TestObject>(config);
+        final Set<TestObject> results = Collections.synchronizedSet(new TreeSet<TestObject>());
+
+        final Set<TestObject> expected = Collections.synchronizedSet(new TreeSet<TestObject>());
+
+        final CountDownLatch startLatch = new CountDownLatch(1);
+        final CountDownLatch endLatch = new CountDownLatch(writerCount + readerCount);
+
+        for (int i = 0; i < writerCount; i++) {
+            final int threadNum = i;
+            Thread writerThread = new Thread(new Runnable() {
+
+                public void run() {
+                    try {
+                        startLatch.await();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
+                    for (int j = 0; j < totalTimes / writerCount; j++) {
+                        try {
+                            TestObject m = new TestObject(totalTimes, "t-" + threadNum + "-" + j, j % 2 == 0, j);
+                            fq.add(m);
+                            expected.add(m);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+
+                    endLatch.countDown();
+                }
+            });
+
+            writerThread.start();
+        }
+
+        for (int i = 0; i < readerCount; i++) {
+            Thread readerThread = new Thread(new Runnable() {
+
+                public void run() {
+                    try {
+                        startLatch.await();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
+                    for (int j = 0; j < totalTimes / readerCount; j++) {
+                        try {
+                            TestObject m = fq.get();
+                            results.add(m);
+                            Thread.sleep(5);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+
+                    endLatch.countDown();
+                }
+            });
+
+            readerThread.start();
+        }
+
+        startLatch.countDown();
+        endLatch.await();
+        Assert.assertTrue(expected.equals(results));
+    }
+
+    @Test
+    public void concurrentTestWriterReaderWithSameSpeed() throws Exception {
+        final int totalTimes = 10000;
+        final int writerCount = 20;
+        final int readerCount = 20;
+
+        Config config = new Config();
+        config.setBaseDir(baseDir.getAbsolutePath());
+
+        final FileQueue<TestObject> fq = new FileQueueImpl<TestObject>(config);
+        final Set<TestObject> results = Collections.synchronizedSet(new TreeSet<TestObject>());
+
+        final Set<TestObject> expected = Collections.synchronizedSet(new TreeSet<TestObject>());
+
+        final CountDownLatch startLatch = new CountDownLatch(1);
+        final CountDownLatch endLatch = new CountDownLatch(writerCount + readerCount);
+
+        for (int i = 0; i < writerCount; i++) {
+            final int threadNum = i;
+            Thread writerThread = new Thread(new Runnable() {
+
+                public void run() {
+                    try {
+                        startLatch.await();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
+                    for (int j = 0; j < totalTimes / writerCount; j++) {
+                        try {
+                            TestObject m = new TestObject(totalTimes, "t-" + threadNum + "-" + j, j % 2 == 0, j);
+                            fq.add(m);
+                            expected.add(m);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+
+                    endLatch.countDown();
+                }
+            });
+
+            writerThread.start();
+        }
+
+        for (int i = 0; i < readerCount; i++) {
+            Thread readerThread = new Thread(new Runnable() {
+
+                public void run() {
+                    try {
+                        startLatch.await();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
+                    for (int j = 0; j < totalTimes / readerCount; j++) {
+                        try {
+                            TestObject m = fq.get();
+                            results.add(m);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+
+                    endLatch.countDown();
+                }
+            });
+
+            readerThread.start();
+        }
+
+        startLatch.countDown();
+        endLatch.await();
+        Assert.assertTrue(expected.equals(results));
+    }
+
+//    @Test
+    public void stressTest() throws Exception {
+        final int writerCount = 20;
+        final int readerCount = 20;
+
+        Config config = new Config();
+        config.setBaseDir(baseDir.getAbsolutePath());
+
+        final FileQueue<TestObject> fq = new FileQueueImpl<TestObject>(config);
+
+        final CountDownLatch startLatch = new CountDownLatch(1);
+        final AtomicBoolean exceptionOccur = new AtomicBoolean(false);
+
+        for (int i = 0; i < writerCount; i++) {
+            final int threadNum = i;
+            Thread writerThread = new Thread(new Runnable() {
+
+                public void run() {
+                    try {
+                        startLatch.await();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
+                    Random random = new Random(System.currentTimeMillis());
+
+                    while (!exceptionOccur.get()) {
+                        try {
+                            TestObject m = new TestObject(1, "t-" + threadNum + "-" + 1, true, 1);
+                            fq.add(m);
+                            System.out.println("[Write]" + m);
+                            Thread.sleep(random.nextInt(100));
+                        } catch (Exception e) {
+                            exceptionOccur.set(true);
+                        }
+                    }
+
+                }
+            });
+
+            writerThread.start();
+        }
+
+        for (int i = 0; i < readerCount; i++) {
+            Thread readerThread = new Thread(new Runnable() {
+
+                public void run() {
+                    try {
+                        startLatch.await();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
+                    Random random = new Random(System.currentTimeMillis());
+
+                    while (!exceptionOccur.get()) {
+                        try {
+                            TestObject m = fq.get();
+                            System.out.println("[Read]" + m);
+                            Thread.sleep(random.nextInt(100));
+                        } catch (Exception e) {
+                            exceptionOccur.set(true);
+                        }
+                    }
+
+                }
+            });
+
+            readerThread.start();
+        }
+
+        startLatch.countDown();
+        System.in.read();
+    }
+
+    private static class TestObject implements Comparable<TestObject>, Serializable {
+        private static final long serialVersionUID = -5420562857827246766L;
+        public int                count;
+        public String             name;
+        public boolean            enable;
+        public long               pos;
+
+        public TestObject(int count, String name, boolean enable, long pos) {
+            super();
+            this.count = count;
+            this.name = name;
+            this.enable = enable;
+            this.pos = pos;
+        }
+
+        @Override
+        public int hashCode() {
+            final int prime = 31;
+            int result = 1;
+            result = prime * result + count;
+            result = prime * result + (enable ? 1231 : 1237);
+            result = prime * result + ((name == null) ? 0 : name.hashCode());
+            result = prime * result + (int) (pos ^ (pos >>> 32));
+            return result;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj)
+                return true;
+            if (obj == null)
+                return false;
+            if (getClass() != obj.getClass())
+                return false;
+            TestObject other = (TestObject) obj;
+            if (count != other.count)
+                return false;
+            if (enable != other.enable)
+                return false;
+            if (name == null) {
+                if (other.name != null)
+                    return false;
+            } else if (!name.equals(other.name))
+                return false;
+            if (pos != other.pos)
+                return false;
+            return true;
+        }
+
+        @Override
+        public String toString() {
+            return "TestObject [count=" + count + ", name=" + name + ", enable=" + enable + ", pos=" + pos + "]";
+        }
+
+        public int compareTo(TestObject o) {
+            return CompareToBuilder.reflectionCompare(this, o);
+        }
+
+    }
+
 }

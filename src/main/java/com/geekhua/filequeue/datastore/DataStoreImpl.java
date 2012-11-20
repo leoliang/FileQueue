@@ -10,10 +10,11 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.geekhua.filequeue.Config;
 import com.geekhua.filequeue.codec.Codec;
-import com.geekhua.filequeue.codec.CodecFactory;
 
 /**
  * 
@@ -26,6 +27,8 @@ public class DataStoreImpl<E> implements DataStore<E> {
     private static final String DATAFILE_SUFIX       = ".fq";
     private static final String DATAFILE_BAKDIR      = "bak";
 
+    private static final Logger log                  = LoggerFactory.getLogger(DataStoreImpl.class);
+
     private static final byte[] DATAFILE_END_CONTENT = new byte[] { (byte) 0xAA, (byte) 0xAA, (byte) 0xAA, (byte) 0xAA,
             (byte) 0xAA, (byte) 0xAA, (byte) 0xAA, (byte) 0xAB };
 
@@ -33,7 +36,7 @@ public class DataStoreImpl<E> implements DataStore<E> {
     private File                baseDir;
     private File                bakDir;
     private int                 blockSize;
-    private Codec<E>            codec;
+    private Codec               codec;
     private long                fileSize;
     private String              name;
     private RandomAccessFile    readingFile          = null;
@@ -50,7 +53,7 @@ public class DataStoreImpl<E> implements DataStore<E> {
         this.blockSize = BlockGroup.estimateBlockSize(config.getMsgAvgLen());
         this.readingFileNo = new AtomicLong(config.getReadingFileNo());
         this.readingOffset = new AtomicLong(config.getReadingOffset());
-        this.codec = CodecFactory.getInstance(config.getCodec());
+        this.codec = config.getCodec();
         this.fileSize = config.getFileSize();
         this.bakReadFile = config.isBakReadFile();
         this.bakDir = new File(new File(config.getBaseDir(), name), DATAFILE_BAKDIR);
@@ -70,14 +73,13 @@ public class DataStoreImpl<E> implements DataStore<E> {
         return true;
     }
 
-    private void createNewWriteFile() {
+    private void createNewWriteFile() throws IOException {
         if (writingFile != null) {
             try {
                 writingFile.write(DATAFILE_END);
                 writingFile.close();
             } catch (IOException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
+                throw e;
             }
             writingFile = null;
         }
@@ -227,6 +229,7 @@ public class DataStoreImpl<E> implements DataStore<E> {
         }
     }
 
+    @SuppressWarnings("unchecked")
     public E take() throws IOException {
         BlockGroup blockGroup = null;
 
@@ -241,7 +244,8 @@ public class DataStoreImpl<E> implements DataStore<E> {
                                 FileUtils.moveFileToDirectory(
                                         new File(baseDir, getDataFileName(readingFileNo.longValue())), bakDir, true);
                             } catch (IOException e) {
-                                // TODO Auto-generated catch block
+                                log.warn("Move file({}) to dir({}) fail.", new File(baseDir,
+                                        getDataFileName(readingFileNo.longValue())), bakDir);
                             }
                         } else {
                             FileUtils.deleteQuietly(new File(baseDir, getDataFileName(readingFileNo.longValue())));
@@ -258,7 +262,7 @@ public class DataStoreImpl<E> implements DataStore<E> {
             return null;
         } else {
             readingOffset.set(readingFile.getFilePointer());
-            return codec.decode(blockGroup.getContent());
+            return (E) codec.decode(blockGroup.getContent());
         }
 
     }
@@ -276,7 +280,7 @@ public class DataStoreImpl<E> implements DataStore<E> {
             try {
                 readingFile.close();
             } catch (IOException e) {
-                // TODO Auto-generated catch block
+                log.warn("Close reading file({}) fail.", getDataFileName(readingFileNo.longValue()));
             }
         }
 
@@ -284,7 +288,7 @@ public class DataStoreImpl<E> implements DataStore<E> {
             try {
                 writingFile.close();
             } catch (IOException e) {
-                // TODO Auto-generated catch block
+                log.warn("Close reading file({}) fail.", getDataFileName(writingFileNo.longValue()));
             }
         }
     }

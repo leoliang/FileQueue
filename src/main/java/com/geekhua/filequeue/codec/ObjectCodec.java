@@ -5,42 +5,38 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.util.Arrays;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * 
  * @author Leo Liang
  * 
  */
-public class ObjectCodec<E> implements Codec<E> {
+public class ObjectCodec implements Codec {
+    private static final Logger log = LoggerFactory.getLogger(ObjectCodec.class);
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see com.geekhua.filequeue.codec.Codec#encode(java.lang.Object)
-     */
-    public byte[] encode(E element) {
+    public byte[] encode(Object element) {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         try {
             ObjectOutputStream oos = new ObjectOutputStream(bos);
             oos.writeObject(element);
         } catch (IOException e) {
+            log.warn("Encode object({}) fail", element);
             return new byte[0];
         }
         return bos.toByteArray();
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see com.geekhua.filequeue.codec.Codec#decode(byte[])
-     */
-    @SuppressWarnings("unchecked")
-    public E decode(byte[] bytes) {
+    public Object decode(byte[] bytes) {
         ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
         try {
             ObjectInputStream ois = new ObjectInputStream(bis);
-            return (E) ois.readObject();
+            return ois.readObject();
         } catch (Exception e) {
+            log.warn("Decode object({}) fail", Arrays.asList(bytes));
             return null;
         }
     }

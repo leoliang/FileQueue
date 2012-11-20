@@ -11,9 +11,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.geekhua.filequeue.Config;
-import com.geekhua.filequeue.Config.CodecType;
 import com.geekhua.filequeue.codec.Codec;
-import com.geekhua.filequeue.codec.CodecFactory;
+import com.geekhua.filequeue.codec.ObjectCodec;
 
 /**
  * @author Leo Liang
@@ -64,7 +63,7 @@ public class DataStoreImplTest {
         for (File file : listFiles) {
             RandomAccessFile fis = new RandomAccessFile(file, "r");
             BlockGroup blockGroup = BlockGroup.read(fis, BlockGroup.estimateBlockSize(10));
-            Codec<String> codec = CodecFactory.getInstance(CodecType.JAVAOBJECT);
+            Codec codec = new ObjectCodec();
             Assert.assertEquals(content, codec.decode(blockGroup.getContent()));
 
             if (i == 0) {
@@ -93,7 +92,7 @@ public class DataStoreImplTest {
             RandomAccessFile file = new RandomAccessFile(listFiles.iterator().next(), "rw");
             file.write(new byte[] { 1, 2, 3 });
             ds.put(content);
-            Codec<byte[]> codec = CodecFactory.getInstance(CodecType.JAVAOBJECT);
+            Codec codec = new ObjectCodec();
             int contentLen = codec.encode(content).length + HEADER.length + CHECKSUMLEN + 4;
             Assert.assertEquals(
                     BlockGroup.estimateBlockSize(10)
@@ -102,7 +101,7 @@ public class DataStoreImplTest {
                             * BlockGroup.estimateBlockSize(10), file.length());
             file.seek(0);
             BlockGroup blockGroup = BlockGroup.read(file, BlockGroup.estimateBlockSize(10));
-            Assert.assertArrayEquals(content, codec.decode(blockGroup.getContent()));
+            Assert.assertArrayEquals(content, (byte[]) codec.decode(blockGroup.getContent()));
             file.close();
         }
     }
@@ -157,9 +156,9 @@ public class DataStoreImplTest {
 
             file.seek(0);
 
-            Codec<byte[]> codec = CodecFactory.getInstance(CodecType.JAVAOBJECT);
+            Codec codec = new ObjectCodec();
             BlockGroup blockGroup = BlockGroup.read(file, BlockGroup.estimateBlockSize(10));
-            Assert.assertArrayEquals(content, codec.decode(blockGroup.getContent()));
+            Assert.assertArrayEquals(content, (byte[]) codec.decode(blockGroup.getContent()));
             blockGroup = BlockGroup.read(file, BlockGroup.estimateBlockSize(10));
             Assert.assertArrayEquals(getEndBlockGroup().getContent(), blockGroup.getContent());
             file.close();

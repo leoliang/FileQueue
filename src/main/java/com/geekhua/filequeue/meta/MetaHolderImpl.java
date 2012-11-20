@@ -10,12 +10,15 @@ import java.nio.channels.FileChannel.MapMode;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author Leo Liang
  * 
  */
 public class MetaHolderImpl implements MetaHolder {
+    private static final Logger   log              = LoggerFactory.getLogger(MetaHolderImpl.class);
     private static final String   METAFILE_DIRNAME = "meta";
     private static final String   METAFILE_NAME    = "meta";
     private static final int      METAFILE_SIZE    = 200;
@@ -85,14 +88,14 @@ public class MetaHolderImpl implements MetaHolder {
                 try {
                     fr.close();
                 } catch (IOException e) {
-                    // TODO
+                    log.warn("Close meta file fail.");
                 }
             }
             if (br != null) {
                 try {
                     br.close();
                 } catch (IOException e) {
-                    // TODO
+                    log.warn("Close meta file fail.");
                 }
             }
         }
