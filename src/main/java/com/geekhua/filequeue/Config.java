@@ -19,10 +19,6 @@ public class Config {
     private long            fileSiz       = 1024 * 1024 * 100;
     private boolean         bakReadFile   = false;
 
-    public static enum CodecType {
-        JAVAOBJECT, KRYO;
-    }
-
     public boolean isBakReadFile() {
         return bakReadFile;
     }
