@@ -4,9 +4,9 @@ package com.geekhua.filequeue.codec;
  * @author Leo Liang
  * 
  */
-public interface Codec<E> {
+public interface Codec {
 
-    byte[] encode(E element);
+    byte[] encode(Object element);
 
-    E decode(byte[] bytes);
+    Object decode(byte[] bytes);
 }

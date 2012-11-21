@@ -1,14 +1,16 @@
 package com.geekhua.filequeue;
 
+import com.geekhua.filequeue.codec.Codec;
+import com.geekhua.filequeue.codec.KryoCodec;
+
 /**
  * 
  * @author Leo Liang
- * 
+ * @author Macro Huang
  */
 public class Config {
 
-    private int             cacheSize     = CACHESIZE_MIN;
-    private CodecType       codec         = CodecType.JAVAOBJECT;
+	private Codec codec = new KryoCodec();
     private String          name          = "default";
     private String          baseDir       = "/data/appdatas/filequeue";
     private int             msgAvgLen     = 1024;
@@ -16,7 +18,6 @@ public class Config {
     private long            readingOffset = 0L;
     private long            fileSiz       = 1024 * 1024 * 100;
     private boolean         bakReadFile   = false;
-    public static final int CACHESIZE_MIN = 200;
 
     public static enum CodecType {
         JAVAOBJECT, KRYO;
@@ -26,10 +27,6 @@ public class Config {
         return bakReadFile;
     }
 
-    /**
-     * @param bakReadFile
-     *            the bakReadFile to set
-     */
     public void setBakReadFile(boolean bakReadFile) {
         this.bakReadFile = bakReadFile;
     }
@@ -42,14 +39,7 @@ public class Config {
         this.fileSiz = fileSiz;
     }
 
-    public void setCacheSize(int cacheSize) {
-        if (cacheSize < CACHESIZE_MIN) {
-            cacheSize = CACHESIZE_MIN;
-        }
-        this.cacheSize = cacheSize;
-    }
-
-    public void setCodec(CodecType codec) {
+    public void setCodec(Codec codec) {
         this.codec = codec;
     }
 
@@ -73,11 +63,7 @@ public class Config {
         this.readingOffset = readingOffset;
     }
 
-    public int getCacheSize() {
-        return cacheSize;
-    }
-
-    public CodecType getCodec() {
+    public Codec getCodec() {
         return codec;
     }
 
