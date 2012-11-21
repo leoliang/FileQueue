@@ -21,6 +21,8 @@ public class KryoCodec implements Codec {
 			kryo = new Kryo();
 			kryo.setRegistrationRequired(false);
 			serializer.set(kryo);
+		}
+		if (output == null) {
 			output = new Output(1024, -1);
 			this.output.set(output);
 		}
@@ -36,6 +38,8 @@ public class KryoCodec implements Codec {
 			kryo = new Kryo();
 			kryo.setRegistrationRequired(false);
 			serializer.set(kryo);
+		}
+		if (input == null) {
 			input = new Input();
 			this.input.set(input);
 		}
