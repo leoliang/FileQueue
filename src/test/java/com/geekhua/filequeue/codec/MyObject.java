@@ -2,7 +2,7 @@ package com.geekhua.filequeue.codec;
 
 import java.io.Serializable;
 
-class MyObject implements Serializable{
+public class MyObject implements Serializable {
 	/**
 	 * 
 	 */

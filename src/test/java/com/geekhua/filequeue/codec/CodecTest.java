@@ -9,7 +9,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class CodecTest {
-	private int MAX_OBJS = 100000;
+    private int MAX_OBJS = 500000;
 	private int MAX_THREADS = 20;
 	private int OBJS_PER_THREAD = MAX_OBJS / MAX_THREADS;
 	private byte[][] objectBytes;

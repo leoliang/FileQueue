@@ -1,5 +1,7 @@
 package com.geekhua.filequeue.codec;
 
+import org.objenesis.strategy.StdInstantiatorStrategy;
+
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
@@ -14,12 +16,17 @@ public class KryoCodec implements Codec {
 	private ThreadLocal<Kryo> serializer = new ThreadLocal<Kryo>();
 	private ThreadLocal<Output> output = new ThreadLocal<Output>();
 	private ThreadLocal<Input> input = new ThreadLocal<Input>();
+	private Class<?> type;
 	public byte[] encode(Object element) {
+		if (type==null){
+			type = element.getClass();
+		}
 		Kryo kryo = serializer.get();
 		Output output = this.output.get();
 		if (kryo == null) {
 			kryo = new Kryo();
 			kryo.setRegistrationRequired(false);
+			kryo.setInstantiatorStrategy(new StdInstantiatorStrategy());
 			serializer.set(kryo);
 		}
 		if (output == null) {
@@ -27,7 +34,7 @@ public class KryoCodec implements Codec {
 			this.output.set(output);
 		}
 		output.clear();
-		kryo.writeClassAndObject(output, element);
+		kryo.writeObject(output, element);
         return output.toBytes();
     }
 
@@ -44,6 +51,7 @@ public class KryoCodec implements Codec {
 			this.input.set(input);
 		}
         input.setBuffer(bytes);
-		return kryo.readClassAndObject(input);
+		return kryo.readObject(input,type);
+//		return kryo.readClassAndObject(input);
     }
 }
