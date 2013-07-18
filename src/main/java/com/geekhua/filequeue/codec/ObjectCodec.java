@@ -36,7 +36,7 @@ public class ObjectCodec implements Codec {
             ObjectInputStream ois = new ObjectInputStream(bis);
             return ois.readObject();
         } catch (Exception e) {
-            log.warn("Decode object({}) fail", Arrays.asList(bytes));
+			log.warn("Decode object({}) fail", Arrays.toString(bytes));
             return null;
         }
     }

@@ -69,8 +69,8 @@ public class DataStoreImplTest {
             if (i == 0) {
                 blockGroup = BlockGroup.read(fis, BlockGroup.estimateBlockSize(10));
                 Assert.assertArrayEquals(getEndBlockGroup().getContent(), blockGroup.getContent());
-                fis.close();
             }
+            fis.close();
             i++;
         }
     }

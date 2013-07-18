@@ -1,21 +1,24 @@
 package com.geekhua.filequeue;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.Serializable;
 import java.util.Collections;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.builder.CompareToBuilder;
-import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
+
+import com.geekhua.filequeue.codec.MyObject;
+import com.geekhua.filequeue.exception.FileQueueClosedException;
 
 /**
  * @author Leo Liang
@@ -27,20 +30,20 @@ public class FileQueueImplTest {
     // private static final File baseDir = new
     // File("/Volumes/HDD/data/appdatas");
 
-    @Before
-    public void before() throws Exception {
-        if (baseDir.exists()) {
-            FileUtils.deleteDirectory(baseDir);
-        }
-        baseDir.mkdirs();
-    }
-
-    @After
-    public void after() throws Exception {
-        if (baseDir.exists()) {
-            FileUtils.deleteDirectory(baseDir);
-        }
-    }
+    // @Before
+    // public void before() throws Exception {
+    // if (baseDir.exists()) {
+    // FileUtils.deleteQuietly(baseDir);
+    // }
+    // baseDir.mkdirs();
+    // }
+    //
+    // @After
+    // public void after() throws Exception {
+    // if (baseDir.exists()) {
+    // FileUtils.deleteQuietly(baseDir);
+    // }
+    // }
 
     @Test
     public void testAdd() throws Exception {
@@ -52,6 +55,48 @@ public class FileQueueImplTest {
         fq.add("ssss");
         Assert.assertEquals("ssss", fq.get());
         fq.close();
+    }
+
+    @Test
+    public void testAddObj() throws Exception {
+        Config config = new Config();
+        config.setBaseDir(baseDir.getAbsolutePath());
+        config.setMsgAvgLen(10);
+        config.setName("test");
+        FileQueue<MyObject> fq = new FileQueueImpl<MyObject>(config);
+        for (int i = 0; i < 10000; i++) {
+            fq.add(new MyObject());
+        }
+        fq.close();
+    }
+    @Test
+    public void testAddObjMultThread() throws Exception {
+    	Config config = new Config();
+    	config.setBaseDir(baseDir.getAbsolutePath());
+    	config.setMsgAvgLen(10);
+    	config.setName("test");
+    	final FileQueue<MyObject> fq = new FileQueueImpl<MyObject>(config);
+    	ExecutorService executorService = Executors.newFixedThreadPool(20);
+    	final int threads = 20;
+    	final int max = 10000;
+    	for (int i=0;i<threads;i++){
+    		executorService.submit(new Runnable() {
+				public void run() {
+					for (int i = 0; i < max / threads; i++) {
+						try {
+							fq.add(new MyObject());
+						} catch (IOException e) {
+							e.printStackTrace();
+						} catch (FileQueueClosedException e) {
+							e.printStackTrace();
+						}
+					}
+				}
+			});
+    	}
+    	executorService.shutdown();
+    	executorService.awaitTermination(100, TimeUnit.SECONDS);
+    	fq.close();
     }
 
     @Test
@@ -288,7 +333,7 @@ public class FileQueueImplTest {
 
         startLatch.countDown();
         endLatch.await();
-        Assert.assertTrue(expected.equals(results));
+        Assert.assertEquals(expected, results);
     }
 
     @Test
@@ -519,13 +564,16 @@ public class FileQueueImplTest {
         System.in.read();
     }
 
-    private static class TestObject implements Comparable<TestObject>, Serializable {
+    public static class TestObject implements Comparable<TestObject>, Serializable {
         private static final long serialVersionUID = -5420562857827246766L;
         public int                count;
         public String             name;
         public boolean            enable;
         public long               pos;
 
+        public TestObject(){
+        	
+        }
         public TestObject(int count, String name, boolean enable, long pos) {
             super();
             this.count = count;

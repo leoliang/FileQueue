@@ -77,6 +77,11 @@
 			<artifactId>commons-lang</artifactId>
 			<version>2.4</version>
 		</dependency>
+		<dependency>
+			<groupId>com.esotericsoftware.kryo</groupId>
+			<artifactId>kryo</artifactId>
+			<version>2.20</version>
+		</dependency>
 	</dependencies>
 	<distributionManagement>
 		<repository>
