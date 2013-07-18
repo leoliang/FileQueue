@@ -129,16 +129,17 @@ public class DataStoreImpl<E> implements DataStore<E> {
     }
 
     private void checkReadingFile() {
-        if (readingFileNo.longValue() < 0 && writingFileNo.longValue() >= 0) {
-            readingFileNo = new AtomicLong(writingFileNo.longValue());
+        if (readingFileNo.longValue() < 0) {
+            readingFileNo = new AtomicLong(0);
             readingOffset.set(0L);
-        } else {
-            File file = new File(baseDir, getDataFileName(readingFileNo.longValue()));
-            while (!file.exists()) {
-                file = new File(baseDir, getDataFileName(readingFileNo.incrementAndGet()));
-                readingOffset.set(0L);
-            }
         }
+
+        File file = new File(baseDir, getDataFileName(readingFileNo.longValue()));
+        while (!file.exists()) {
+            file = new File(baseDir, getDataFileName(readingFileNo.incrementAndGet()));
+            readingOffset.set(0L);
+        }
+
     }
 
     private void recoverLastDataFileIfNeeded() throws IOException {
@@ -151,15 +152,10 @@ public class DataStoreImpl<E> implements DataStore<E> {
                     long newLength = (lastWriteFile.length() / blockSize + 1) * blockSize;
                     lastWriteFile.seek(newLength);
                     lastWriteFile.setLength(newLength);
+                } else {
+                    lastWriteFile.seek(lastWriteFile.length());
                 }
-
-                if (lastWriteFile.length() >= DATAFILE_END.length) {
-                    lastWriteFile.seek(lastWriteFile.length() - DATAFILE_END.length);
-                }
-                BlockGroup end = BlockGroup.read(lastWriteFile, blockSize);
-                if (!ArrayUtils.isEquals(end, DATAFILE_END)) {
-                    lastWriteFile.write(DATAFILE_END);
-                }
+                lastWriteFile.write(DATAFILE_END);
             } finally {
                 if (lastWriteFile != null) {
                     lastWriteFile.close();
@@ -235,7 +231,7 @@ public class DataStoreImpl<E> implements DataStore<E> {
 
         if (readingFileNo.longValue() >= 0) {
             blockGroup = BlockGroup.read(readingFile, blockSize);
-            if (blockGroup != null && ArrayUtils.isEquals(blockGroup.array(), DATAFILE_END)) {
+            if ((blockGroup != null && ArrayUtils.isEquals(blockGroup.array(), DATAFILE_END)) || blockGroup == null) {
                 if (readingFileNo.longValue() < writingFileNo.longValue()) {
                     if (readingFile != null) {
                         readingFile.close();

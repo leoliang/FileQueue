@@ -5,7 +5,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.geekhua</groupId>
 	<artifactId>file-queue</artifactId>
-	<version>0.1.0</version>
+	<version>0.1.1</version>
 	<name>FileQueue</name>
 	<url>https://github.com/leoliang/FileQueue</url>
 	<packaging>jar</packaging>
@@ -19,6 +19,19 @@
 
 	<build>
 		<plugins>
+			<plugin>
+				<artifactId>maven-source-plugin</artifactId>
+				<version>2.1.2</version>
+				<executions>
+					<execution>
+						<id>attach-sources</id>
+						<phase>package</phase>
+						<goals>
+							<goal>jar-no-fork</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
@@ -65,4 +78,22 @@
 			<version>2.4</version>
 		</dependency>
 	</dependencies>
+	<distributionManagement>
+		<repository>
+			<id>dianping.repo</id>
+			<name>internal corporate repository</name>
+			<url>http://mvn.dianpingoa.com/dianping-releases
+            </url>
+		</repository>
+		<snapshotRepository>
+			<id>dianping.repo.snapshots</id>
+			<name>internal corporate snapshots repository</name>
+			<url>http://mvn.dianpingoa.com/dianping-snapshots
+            </url>
+		</snapshotRepository>
+	</distributionManagement>
+	<properties>
+		<project.build.sourceEncoding>utf-8
+		</project.build.sourceEncoding>
+	</properties>
 </project>

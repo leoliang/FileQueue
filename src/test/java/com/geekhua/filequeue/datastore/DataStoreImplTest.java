@@ -165,6 +165,66 @@ public class DataStoreImplTest {
         }
     }
 
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testLastDataFileRecover3() throws Exception {
+        Config config = new Config();
+        config.setMsgAvgLen(5);
+        config.setBaseDir(baseDir.getAbsolutePath());
+        config.setFileSiz(400);
+        DataStore<byte[]> ds = new DataStoreImpl<byte[]>(config);
+        ds.init();
+        byte[] content = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20 };
+        ds.put(content);
+        Collection<File> listFiles = (Collection<File>) FileUtils.listFiles(baseDir, new String[] { "fq" }, true);
+        if (listFiles.isEmpty() || listFiles.size() != 1) {
+            Assert.fail();
+        } else {
+            ds = new DataStoreImpl<byte[]>(config);
+            ds.init();
+
+            RandomAccessFile file = new RandomAccessFile(listFiles.iterator().next(), "rw");
+            Codec codec = new ObjectCodec();
+            BlockGroup blockGroup = BlockGroup.read(file, BlockGroup.estimateBlockSize(5));
+            Assert.assertArrayEquals(content, (byte[]) codec.decode(blockGroup.getContent()));
+        }
+
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testLastDataFileRecover4() throws Exception {
+        Config config = new Config();
+        config.setMsgAvgLen(5);
+        config.setBaseDir(baseDir.getAbsolutePath());
+        config.setFileSiz(100);
+        DataStore<byte[]> ds = new DataStoreImpl<byte[]>(config);
+        ds.init();
+        BlockGroup block = BlockGroup.allocate(80, BlockGroup.estimateBlockSize(5));
+        block.setContent(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 1, 2, 3,
+                4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
+                13, 14, 15, 16, 17, 18, 19, 20, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20 });
+        byte[] content = block.array();
+        byte[] corruptContent = new byte[content.length - 120];
+        System.arraycopy(content, 0, corruptContent, 0, content.length - 120);
+
+        Collection<File> listFiles = (Collection<File>) FileUtils.listFiles(baseDir, new String[] { "fq" }, true);
+        if (listFiles.isEmpty() || listFiles.size() != 1) {
+            Assert.fail();
+        } else {
+            RandomAccessFile file = new RandomAccessFile(listFiles.iterator().next(), "rw");
+            file.write(corruptContent);
+            ds = new DataStoreImpl<byte[]>(config);
+            ds.init();
+            ds.put(new byte[] { 1, 2, 3 });
+
+            byte[] read = ds.take();
+
+            Assert.assertArrayEquals(new byte[] { 1, 2, 3 }, read);
+        }
+
+    }
+
     @Test
     public void testTake() throws Exception {
         Config config = new Config();
