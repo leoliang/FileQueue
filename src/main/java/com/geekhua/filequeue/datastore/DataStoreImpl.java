@@ -289,4 +289,22 @@ public class DataStoreImpl<E> implements DataStore<E> {
         }
     }
 
+    /* (non-Javadoc)
+     * @see com.geekhua.filequeue.datastore.DataStore#writingFileNo()
+     */
+    public long writingFileNo() {
+        return writingFileNo.get();
+    }
+
+    /* (non-Javadoc)
+     * @see com.geekhua.filequeue.datastore.DataStore#writingFileOffset()
+     */
+    public long writingFileOffset() {
+        try {
+            return writingFile.getFilePointer();
+        } catch (IOException e) {
+            return -1;
+        }
+    }
+
 }

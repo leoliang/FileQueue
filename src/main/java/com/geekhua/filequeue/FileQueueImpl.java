@@ -122,5 +122,21 @@ public class FileQueueImpl<E> implements FileQueue<E> {
             writeLock.unlock();
         }
     }
+    
+    public long getReadingFileNo(){
+        return metaHolder.getReadingFileNo();
+    }
+    
+    public long getReadingFileOffset(){
+        return metaHolder.getReadingFileOffset();
+    }
+    
+    public long getWritingFileNo(){
+        return dataStore.writingFileNo();
+    }
+    
+    public long getWritingFileOffset(){
+        return dataStore.writingFileOffset();
+    }
 
 }

@@ -20,5 +20,9 @@ public interface DataStore<E> {
     long readingFileOffset();
 
     long readingFileNo();
+    
+    long writingFileNo();
+    
+    long writingFileOffset();
 
 }
