@@ -89,7 +89,7 @@ public class DataStoreImpl<E> implements DataStore<E> {
             try {
                 writingFile = new RandomAccessFile(new File(baseDir, newWriteFileName), "rw");
             } catch (FileNotFoundException e) {
-                throw new IllegalStateException(String.format("File(%s) not found", newWriteFileName));
+                throw new IllegalStateException(String.format("File(%s) not found", newWriteFileName), e);
             }
         } else {
             throw new IllegalStateException("Can not create new write file");
@@ -202,8 +202,16 @@ public class DataStoreImpl<E> implements DataStore<E> {
                             : ((readingOffset.longValue() / blockSize + 1) * blockSize));
                 }
             } catch (IOException e) {
+                if(readingFile != null){
+                    try{
+                        readingFile.close();
+                    }catch(Exception e1){
+                        // ignore
+                    }
+                    readingFile = null;
+                }
                 throw new IllegalStateException(String.format("File(%s) open fail",
-                        getDataFileName(readingFileNo.longValue())));
+                        getDataFileName(readingFileNo.longValue())), e);
             }
         }
     }
@@ -230,11 +238,16 @@ public class DataStoreImpl<E> implements DataStore<E> {
         BlockGroup blockGroup = null;
 
         if (readingFileNo.longValue() >= 0) {
+            if(readingFile == null){
+                openReadingFile();
+            }
+            
             blockGroup = BlockGroup.read(readingFile, blockSize);
             if ((blockGroup != null && ArrayUtils.isEquals(blockGroup.array(), DATAFILE_END)) || blockGroup == null) {
                 if (readingFileNo.longValue() < writingFileNo.longValue()) {
                     if (readingFile != null) {
                         readingFile.close();
+                        readingFile = null;
                         if (bakReadFile) {
                             try {
                                 FileUtils.moveFileToDirectory(

@@ -5,7 +5,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.geekhua</groupId>
 	<artifactId>file-queue</artifactId>
-	<version>0.1.2</version>
+	<version>0.1.4</version>
 	<name>FileQueue</name>
 	<url>https://github.com/leoliang/FileQueue</url>
 	<packaging>jar</packaging>
