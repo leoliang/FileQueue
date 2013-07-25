@@ -1,23 +1,22 @@
 package com.geekhua.filequeue;
 
 import com.geekhua.filequeue.codec.Codec;
-import com.geekhua.filequeue.codec.KryoCodec;
+import com.geekhua.filequeue.codec.ObjectCodec;
 
 /**
  * 
  * @author Leo Liang
- * @author Macro Huang
  */
 public class Config {
 
-	private Codec codec = new KryoCodec();
-    private String          name          = "default";
-    private String          baseDir       = "/data/appdatas/filequeue";
-    private int             msgAvgLen     = 1024;
-    private long            readingFileNo = -1L;
-    private long            readingOffset = 0L;
-    private long            fileSiz       = 1024 * 1024 * 100;
-    private boolean         bakReadFile   = false;
+    private Codec   codec         = new ObjectCodec();
+    private String  name          = "default";
+    private String  baseDir       = "/data/appdatas/filequeue";
+    private int     msgAvgLen     = 1024;
+    private long    readingFileNo = -1L;
+    private long    readingOffset = 0L;
+    private long    fileSiz       = 1024 * 1024 * 100;
+    private boolean bakReadFile   = false;
 
     public boolean isBakReadFile() {
         return bakReadFile;
